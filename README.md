@@ -1,59 +1,103 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Ujian Sekolah
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Aplikasi web ujian sekolah profesional berbasis **Laravel 12**, dirancang untuk
+sekolah menengah dengan dukungan multi-peran (admin, guru, siswa), bank soal
+modular, sistem ujian online dengan timer & autosave, penilaian otomatis +
+manual, serta laporan ekspor Excel/PDF.
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Laravel 12** (PHP ^8.2)
+- **Laravel Breeze** (auth scaffolding)
+- **Blade + Tailwind CSS** (`darkMode: 'class'`)
+- **Alpine.js** (sidebar, autosave, timer)
+- **MySQL** (production) — SQLite untuk dev cepat
+- **Maatwebsite Excel** + **DomPDF** (export)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Fitur Utama
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+| Modul | Detail |
+| --- | --- |
+| Auth | Single login multi-field: email → guru, NISN (digit) → siswa, lainnya → username admin. Single-session enforcement untuk siswa, rate-limited login. |
+| Master Data | Jurusan, Kelas, Mapel, Bab, Tahun Ajaran + Semester, Guru pengampu mapel. |
+| User | CRUD siswa & guru, import siswa via Excel, reset password. |
+| Bank Soal | Pilihan ganda + essay, upload gambar, kategori bab, tingkat kesulitan. |
+| Ujian | Token opsional, randomize soal/jawaban, status draft/published/closed, manage soal per ujian. |
+| Pengerjaan | Timer countdown (auto-submit saat habis), navigator soal, tandai ragu, autosave per soal (debounced fetch + JSON), progress per warna. |
+| Penilaian | Auto-score PG, manual essay, kalkulasi total + persentase + lulus/tidak otomatis via `ExamScorer`. |
+| Laporan | Ranking peserta, statistik (rata-rata, tertinggi, terendah, lulus), export Excel & PDF. |
+| UI | Tailwind modern, dark mode (toggle topbar, persisted in `localStorage`), responsive sidebar (mobile drawer), toast alert. |
 
-## Learning Laravel
+## Struktur Modul
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+```
+app/
+├── Http/
+│   ├── Controllers/{Admin,Teacher,Student}/
+│   ├── Middleware/EnsureRole.php
+│   └── Middleware/EnsureSingleSession.php
+├── Imports/StudentsImport.php
+├── Exports/ExamResultsExport.php
+├── Models/  (User, Jurusan, SchoolClass, Mapel, Chapter, Question, Exam, …)
+└── Services/ExamScorer.php
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+resources/views/
+├── layouts/{app,guest,sidebar,topbar}.blade.php
+├── components/  (page-title, card, btn, stat-card, form-input, form-select)
+├── auth/login.blade.php       (single field "identifier")
+├── admin/  (dashboard + master data CRUD)
+├── teacher/ (dashboard, chapters, questions, exams, grading, reports)
+└── student/ (dashboard, exams index/show/take/result)
+```
 
-## Laravel Sponsors
+## Instalasi
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+git clone <repo-url> ujian-sekolah
+cd ujian-sekolah
+composer install
+npm install
+cp .env.example .env
+php artisan key:generate
 
-### Premium Partners
+# Konfigurasi MySQL di .env, lalu:
+php artisan migrate --seed
+php artisan storage:link
+npm run build      # atau: npm run dev
+php artisan serve
+```
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Akun Default (Seeder)
 
-## Contributing
+| Peran | Identifier | Password |
+| --- | --- | --- |
+| Admin | `admin` | `password` |
+| Guru | `guru@sekolah.test` | `password` |
+| Siswa | `0012345678` | `0012345678` |
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+Login pakai field tunggal `identifier`; sistem otomatis mendeteksi
+email/NISN/username.
 
-## Code of Conduct
+## Skrip Penting
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+```bash
+php artisan migrate:fresh --seed   # reset DB + sample data
+./vendor/bin/pint                  # lint Laravel preset
+npm run build                      # asset production
+php artisan route:list             # 92 routes
+php artisan queue:work             # untuk job (jika dipakai)
+```
 
-## Security Vulnerabilities
+## Catatan Production
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://...`
+- DB: MySQL 8 (utf8mb4), set `SESSION_DRIVER=database` atau `redis` untuk skala besar.
+- `php artisan config:cache && php artisan route:cache && php artisan view:cache`.
+- Symlink storage: `php artisan storage:link`.
+- Pastikan `php artisan storage:link` agar gambar soal terakses.
+- Cron untuk schedule: `* * * * * php artisan schedule:run >> /dev/null 2>&1`.
+- Queue (untuk import Excel besar): `php artisan queue:work --tries=3`.
 
-## License
+## Lisensi
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+MIT
